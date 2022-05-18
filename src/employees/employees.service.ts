@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EmployeeEntity } from './employee.entity';
 import { Repository } from 'typeorm';
@@ -19,21 +23,12 @@ export class EmployeesService {
     @InjectRepository(ContactinfoEntity)
     private contactEntity: Repository<ContactinfoEntity>,
   ) {}
-  async createEmployee(data): Promise<any> {
-    const employees = this.employeeEntity.create(data);
-    const users = await this.employeeEntity.find(data);
+  async createEmployee(data): Promise<EmployeeEntity[]> {
+    const allUsers = this.employeeEntity.create(data);
     try {
-      users.map((allUsers) => {
-        if (data.email == allUsers.email) {
-          console.log(allUsers);
-          return {
-            error: 'this email is already taken',
-          };
-        }
-      });
-      return this.employeeEntity.save(employees);
+      return await this.employeeEntity.save(allUsers);
     } catch (error) {
-      throw new BadRequestException('email is already taken');
+      throw new BadRequestException();
     }
   }
 
@@ -53,40 +48,47 @@ export class EmployeesService {
     console.log(user);
     try {
       if (user.roles !== 'admin') {
-        throw new BadRequestException('user can not perform this action')
-        // return {
-        //   error: 'only admin is allowed to perform this action',
-        // };
-      } else if (!user) {
-        // return {
-        //   message: 'please login to access this resource',
-        // };
+        new UnauthorizedException('user can not perform this action');
       } else {
-        // return await this.employeeEntity.find();
         return paginate<EmployeeEntity>(queryBuilder, options);
       }
     } catch (error) {
       return error;
     }
   }
-
-  async update(id, data, currentUser): Promise<any> {
+  async adminUpdateUser(id, data, currentUser) {
     const user = await this.employeeEntity.findOne(currentUser);
+    console.log(user);
     try {
-      console.log(id, user);
-      if (user.id == id) {
-        return this.employeeEntity.update(id, data);
-      } else if (user.id !== id) {
+      if (user.roles !== 'admin') {
         return {
-          message: 'you can only update your account',
+          data: new UnauthorizedException('only admin can perform this action'),
         };
       } else {
-        return {
-          message: 'already applied updates',
-        };
+        console.log(data, id);
+        return await this.employeeEntity.update(id, {
+          roles: data.roles,
+        });
       }
+    } catch (error) {}
+  }
+  async update(id, data, currentUser): Promise<any> {
+    try {
+      const user = await this.employeeEntity.findOne(currentUser);
+      console.log(id);
+      if (user.id == id) {
+        return this.employeeEntity.update(id, {
+          roles: user.roles,
+        });
+      }
+      return {
+        message: new UnauthorizedException(
+          'you don have access to this resource',
+        ),
+      };
     } catch (error) {
-      throw new BadRequestException('you can only update your account');
+      // internal server error
+      throw new UnauthorizedException('you can only update your account');
     }
   }
 }

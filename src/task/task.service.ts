@@ -1,7 +1,7 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, UnauthorizedException } from "@nestjs/common";
 import { InjectRepository } from '@nestjs/typeorm';
 import { TaskEntity } from './task.entity';
-import { Repository } from 'typeorm';
+import { Like, Repository } from "typeorm";
 import { EmployeeEntity } from '../employees/employee.entity';
 import { JwtService } from '@nestjs/jwt';
 import {
@@ -30,18 +30,15 @@ export class TaskService {
       const user = this.taskEntity.create({
         taskName: taskName,
       });
-      if (newId.roles == 'admin') {
+      if (newId.roles == 'admin' || newId.roles == 'manager') {
         console.log(user);
         return await this.taskEntity.save(user);
-      } else if (newId.roles == 'manager') {
-        return await this.taskEntity.save(user);
-      } else {
-        return {
-          error: 'only users with admin or manager role can create task',
-        };
       }
+        return {
+        erro: new UnauthorizedException('only users with admin or manager role can create task',)
+        };
     } catch (error) {
-      throw new BadRequestException('task already exist');
+      throw new BadRequestException(error.message);
     }
   }
   findAllTask(): Observable<TaskEntity[]> {
@@ -82,25 +79,20 @@ export class TaskService {
       console.log(user);
       if (user.roles == 'admin') {
         return this.taskEntity.delete(id);
-      } else {
+      }
         return {
           message: 'only system admin can delete this task',
         };
-      }
     } catch (error) {
-      throw new BadRequestException('only system admin can delete this task');
+      throw new BadRequestException(error.message);
     }
   }
   findSingle(id): Promise<any> {
     return this.taskEntity.findOne(id);
   }
 
-  async queryBuilder(alias: string): Promise<any> {
-    try {
+  async queryBuilder(alias: string){
       console.log(alias);
-      return this.taskEntity.createQueryBuilder(alias);
-    } catch (error) {
-      error.message;
-    }
+      return await this.taskEntity.createQueryBuilder(alias);
   }
 }

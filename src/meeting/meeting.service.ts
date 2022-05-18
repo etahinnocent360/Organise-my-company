@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { MeetingEntity } from './meeting.entity';
 import { Repository } from 'typeorm';
@@ -12,15 +12,23 @@ export class MeetingService {
     @InjectRepository(EmployeeEntity)
     private employeeRepo: Repository<EmployeeEntity>,
   ) {}
-  async createMeeting(zoomUrl): Promise<any> {
-    const repo = await this.employeeRepo.findOne();
-    const allRepo = await this.employeeRepo.find();
-    allRepo.map(async (allRip) => {
-      return await this.meetingRepo.save({
-        zoomUrl: zoomUrl,
-        attendees: allRip,
-      });
-    });
-    return allRepo;
+  async createMeeting(zoomUrl, currentUser): Promise<any> {
+    const repo = await this.employeeRepo.findOne(currentUser);
+    try {
+      if (repo.roles !== 'admin') {
+        return {
+          data: new UnauthorizedException('only admin can create meeting'),
+        };
+      } else {
+        return this.meetingRepo.save({
+          zoomUrl: zoomUrl,
+        });
+      }
+    } catch (error) {
+      throw new Error();
+    }
+  }
+  async getMeetings(): Promise<MeetingEntity[]> {
+    return await this.meetingRepo.find();
   }
 }

@@ -93,6 +93,7 @@ export class EmployeesController {
     @Body('name') name: string,
     @Body('email') email: string,
     @Body('roles') roles: any,
+    @Body('meeting') meeting: number,
 
     @Req() request: Request,
   ) {
@@ -104,6 +105,7 @@ export class EmployeesController {
         name,
         email,
         roles,
+        meeting
       },
       { id: data['id'] },
     );
@@ -127,5 +129,11 @@ export class EmployeesController {
     return {
       message: 'you have logout of your account',
     };
+  }
+  @Put('adminUpdate/:id')
+  async adminUpdateUser(@Param('id') id: number, @Body('roles') roles: string, @Req() request: Request) {
+    const cookie = request.cookies['jwt'];
+    const data = await this.jwtService.verifyAsync(cookie);
+  return   this.employeeService.adminUpdateUser(id, {roles}, { id: data['id'] })
   }
 }

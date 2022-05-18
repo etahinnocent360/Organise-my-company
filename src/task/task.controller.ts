@@ -70,10 +70,5 @@ export class TaskController {
   singleTask(@Param('id') id: number){
     return this.taskService.findSingle(id)
   }
-  @Get()
-  async searchTask(@Req() request: Request){
-    return this.taskService.findAllTask()
-  }
-
 
 }
